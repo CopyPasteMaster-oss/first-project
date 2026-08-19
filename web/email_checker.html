@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>垃圾邮件分类器（网页演示版）</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 16px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 720px;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 20px;
+    padding: 40px 36px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  h1 {
+    font-size: 26px;
+    color: #0f3460;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  .badge {
+    display: inline-block;
+    background: #e8f0fe;
+    color: #1a73e8;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  textarea {
+    width: 100%;
+    height: 220px;
+    border: 2px solid #e0e6ef;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    line-height: 1.7;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+
+  textarea:focus { border-color: #1a73e8; }
+
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 22px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+  }
+
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #1a73e8, #0f3460);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(26, 115, 232, 0.35);
+    flex: 1;
+  }
+
+  .btn-ghost { background: #f1f4f9; color: #555; }
+
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  #result {
+    display: none;
+    margin-top: 22px;
+    border-radius: 12px;
+    padding: 18px 20px;
+    font-size: 17px;
+    text-align: center;
+    font-weight: bold;
+    border: 2px solid transparent;
+  }
+
+  #result.spam {
+    display: block;
+    background: #fdecea;
+    border-color: #f5b5ac;
+    color: #c62828;
+  }
+
+  #result.ham {
+    display: block;
+    background: #e8f5e9;
+    border-color: #a5d6a7;
+    color: #2e7d32;
+  }
+
+  #hitKeywords {
+    display: none;
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: #f7f9fc;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #666;
+    text-align: left;
+    line-height: 1.8;
+  }
+
+  .kw {
+    display: inline-block;
+    background: #fdecea;
+    color: #c62828;
+    border-radius: 6px;
+    padding: 2px 8px;
+    margin: 2px 3px;
+    font-weight: normal;
+  }
+
+  .tip {
+    margin-top: 18px;
+    padding: 12px 16px;
+    background: #fffbe6;
+    border: 1px dashed #e6c200;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #8d6e63;
+    line-height: 1.8;
+  }
+
+  .footer {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 12px;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>📧 垃圾邮件分类器 <span class="badge">网页演示版</span></h1>
+  <p class="subtitle">把邮件内容粘贴到下面，点"开始检测"即可判断它是垃圾邮件还是正常邮件</p>
+
+  <textarea id="content" placeholder="在这里粘贴或输入邮件内容，例如：&#10;&#10;尊敬客户，本公司长期代开增值税发票，税率低，重合同讲信誉，效力高，开出税票可待客户验证后付款……"></textarea>
+
+  <div class="toolbar">
+    <button class="btn btn-ghost" onclick="fillExample()">✨ 填入示例邮件</button>
+    <button class="btn btn-ghost" onclick="clearText()">清空</button>
+    <button class="btn btn-primary" id="submitBtn" onclick="submitEmail()">🚀 开始检测</button>
+  </div>
+
+  <div id="result"></div>
+  <div id="hitKeywords"></div>
+
+  <div class="tip">
+    💡 <b>演示版说明：</b>本页面是纯前端，用"关键词评分"模拟判断（命中的词会显示出来）。
+    真实项目中，这里会改为调用你训练好的朴素贝叶斯模型（通过 Flask 接口），
+    前端只需要一行 <code>fetch</code> 请求——替换方法写在代码注释里。
+  </div>
+
+  <p class="footer">朴素贝叶斯 · TREC06C 数据集 · 纯前端演示版</p>
+</div>
+
+<script>
+  // ============================================================
+  // 演示用的"关键词评分"规则（模拟模型判断）
+  // 真实版：用 fetch 调用 Flask 接口，让后端模型判断，例如：
+  //
+  //   const resp = await fetch('http://127.0.0.1:5000/email_handle', {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify({ content: emailText })
+  //   });
+  //   const data = await resp.json();
+  //   // data.result === '垃圾邮件' / '正常邮件'
+  //
+  // 下方 check() 函数就是被这个 fetch 调用替代的部分。
+  // ============================================================
+
+  // 垃圾邮件高频词（命中越多，越像垃圾邮件）
+  const SPAM_WORDS = [
+    '发票', '代开', '税率', '税票', '缴款', '增值税', '海关',
+    '汇款', '转账', '中奖', '抽奖', '免费', '促销', '优惠',
+    '点击', '链接', '注册', '兼职', '贷款', '信用卡', '额度',
+    '客服', '退订', '验证码', '详情', '咨询', '商祺', '陈生',
+    '限量', '秒杀', '包邮', '赚钱', '返利', '理财', '股票', '内幕'
+  ];
+
+  // 正常邮件高频词（命中越多，越像正常邮件）
+  const HAM_WORDS = [
+    '老师', '同学', '朋友', '家人', '父母', '今天', '明天',
+    '吃饭', '电影', '故事', '周末', '工作', '会议', '项目',
+    '学习', '考试', '成绩', '喜欢', '谢谢', '感谢', '见面',
+    '回家', '天气', '心情', '学校', '公司', '同事'
+  ];
+
+  // 示例邮件：一封典型垃圾邮件 + 一封正常邮件
+  const examples = {
+    spam: "尊敬客户，本公司长期代开增值税发票、海关缴款书，税率低，重合同讲信誉，效力高，开出税票可待客户验证后付款。如有需要请联系公司主管陈生，电话咨询，量大优惠，先到先得！",
+    ham: "讲的是孔子后人的故事。一个老领导回到家乡，跟儿子感情不和，跟贪财的孙子孔为本和睦。老领导的弟弟是赶马车的，有个洋妞大概是考察民俗的，在他们家过年。最后，一家人基本和解。"
+  };
+
+  function fillExample() {
+    const textarea = document.getElementById('content');
+    // 轮流填入垃圾/正常示例
+    if (textarea.value.includes('发票')) {
+      textarea.value = examples.ham;
+    } else {
+      textarea.value = examples.spam;
+    }
+  }
+
+  function clearText() {
+    document.getElementById('content').value = '';
+    document.getElementById('result').className = '';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('hitKeywords').style.display = 'none';
+  }
+
+  function check(emailText) {
+    // ---------- 演示版：关键词评分 ----------
+    // 真实版：这里替换成 fetch 调用 Flask 后端模型
+    let score = 0;
+    const hit = [];          // 命中的垃圾词
+    for (const w of SPAM_WORDS) {
+      if (emailText.includes(w)) { score += 2; hit.push(w); }
+    }
+    for (const w of HAM_WORDS) {
+      if (emailText.includes(w)) { score -= 1; }
+    }
+    const isSpam = score >= 3;
+    return { isSpam, hit };
+  }
+
+  async function submitEmail() {
+    const content = document.getElementById('content').value.trim();
+    const resultBox = document.getElementById('result');
+    const hitBox = document.getElementById('hitKeywords');
+    const btn = document.getElementById('submitBtn');
+
+    if (!content) {
+      resultBox.className = 'waiting';
+      resultBox.style.display = 'block';
+      resultBox.innerHTML = '⚠️ 请先输入邮件内容';
+      return;
+    }
+
+    btn.disabled = true;
+    resultBox.className = 'waiting';
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = '<span class="loading">⏳</span> 正在分析，请稍候…';
+    hitBox.style.display = 'none';
+
+    // 模拟一点点延迟，更像真实请求
+    await new Promise(r => setTimeout(r, 400));
+
+    const { isSpam, hit } = check(content);
+
+    if (isSpam) {
+      resultBox.className = 'spam';
+      resultBox.innerHTML = '⚠️ 判定结果：<b>垃圾邮件</b>（建议不要点击其中的链接或附件）';
+      if (hit.length > 0) {
+        hitBox.style.display = 'block';
+        hitBox.innerHTML = '🔍 命中的垃圾关键词：' + hit.map(w => '<span class="kw">' + w + '</span>').join('');
+      }
+    } else {
+      resultBox.className = 'ham';
+      resultBox.innerHTML = '✅ 判定结果：<b>正常邮件</b>';
+      hitBox.style.display = 'none';
+    }
+
+    btn.disabled = false;
+  }
+</script>
+</body>
+</html>

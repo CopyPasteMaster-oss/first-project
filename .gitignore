@@ -1,0 +1,20 @@
+# ===== Python 缓存 =====
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# ===== 虚拟环境（几百MB，绝对不传）=====
+.venv/
+venv/
+env/
+
+# ===== 模型文件与数据集（太大，训练后可重新生成）=====
+*.pth
+*.joblib
+train_model/data/
+
+# ===== 系统/编辑器杂项 =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

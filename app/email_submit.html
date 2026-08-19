@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>垃圾邮件分类器</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 16px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 720px;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 20px;
+    padding: 40px 36px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  h1 {
+    font-size: 26px;
+    color: #0f3460;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  .badge {
+    display: inline-block;
+    background: #e8f0fe;
+    color: #1a73e8;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  textarea {
+    width: 100%;
+    height: 220px;
+    border: 2px solid #e0e6ef;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    line-height: 1.7;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+
+  textarea:focus { border-color: #1a73e8; }
+
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 22px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+  }
+
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #1a73e8, #0f3460);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(26, 115, 232, 0.35);
+    flex: 1;
+  }
+
+  .btn-ghost {
+    background: #f1f4f9;
+    color: #555;
+  }
+
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  #result {
+    display: none;
+    margin-top: 22px;
+    border-radius: 12px;
+    padding: 18px 20px;
+    font-size: 17px;
+    text-align: center;
+    font-weight: bold;
+    border: 2px solid transparent;
+  }
+
+  #result.spam {
+    display: block;
+    background: #fdecea;
+    border-color: #f5b5ac;
+    color: #c62828;
+  }
+
+  #result.ham {
+    display: block;
+    background: #e8f5e9;
+    border-color: #a5d6a7;
+    color: #2e7d32;
+  }
+
+  #result.waiting {
+    display: block;
+    background: #fff8e1;
+    border-color: #ffe082;
+    color: #8d6e63;
+  }
+
+  .loading {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 3px solid #ccc;
+    border-top-color: #1a73e8;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .footer {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 12px;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>📧 垃圾邮件分类器 <span class="badge">朴素贝叶斯 · 准确率 97%</span></h1>
+  <p class="subtitle">把邮件内容粘贴到下面，点“开始检测”即可判断它是垃圾邮件还是正常邮件</p>
+
+  <textarea id="content" placeholder="在这里粘贴或输入邮件内容，例如：&#10;&#10;尊敬客户，本公司代开增值税发票，税率低，重合同讲信誉，请联系公司主管商祺……"></textarea>
+
+  <div class="toolbar">
+    <button class="btn btn-ghost" onclick="fillExample()">✨ 填入示例邮件</button>
+    <button class="btn btn-ghost" onclick="clearText()">清空</button>
+    <button class="btn btn-primary" id="submitBtn" onclick="submitEmail()">🚀 开始检测</button>
+  </div>
+
+  <div id="result"></div>
+
+  <p class="footer">模型训练自 TREC06C 中文垃圾邮件数据集 · Flask + 朴素贝叶斯</p>
+</div>
+
+<script>
+  // 示例邮件：一封典型垃圾邮件 + 一封正常邮件，方便测试
+  const examples = {
+    spam: "尊敬客户，本公司长期代开增值税发票、海关缴款书，税率低，重合同讲信誉，效力高，开出税票可待客户验证后付款。如有需要请联系公司主管陈生，电子邮件咨询。",
+    ham: "讲的是孔子后人的故事。一个老领导回到家乡，跟儿子感情不和，跟贪财的孙子孔为本和睦。老领导的弟弟是赶马车的，有个洋妞大概是考察民俗的，在他们家过年。最后，一家人基本和解。"
+  };
+
+  function fillExample() {
+    const textarea = document.getElementById('content');
+    // 轮流填入垃圾/正常示例
+    if (textarea.value.includes('发票')) {
+      textarea.value = examples.ham;
+    } else {
+      textarea.value = examples.spam;
+    }
+  }
+
+  function clearText() {
+    document.getElementById('content').value = '';
+    document.getElementById('result').className = '';
+    document.getElementById('result').style.display = 'none';
+  }
+
+  async function submitEmail() {
+    const content = document.getElementById('content').value.trim();
+    const resultBox = document.getElementById('result');
+    const btn = document.getElementById('submitBtn');
+
+    if (!content) {
+      resultBox.className = 'waiting';
+      resultBox.innerHTML = '⚠️ 请先输入邮件内容';
+      return;
+    }
+
+    btn.disabled = true;
+    resultBox.className = 'waiting';
+    resultBox.innerHTML = '<span class="loading"></span>正在分析，请稍候…';
+
+    try {
+      const resp = await fetch('/email_handle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content })
+      });
+      const data = await resp.json();
+
+      if (data.result === '垃圾邮件') {
+        resultBox.className = 'spam';
+        resultBox.innerHTML = '⚠️ 判定结果：<b>垃圾邮件</b>（建议不要点击其中链接或附件）';
+      } else {
+        resultBox.className = 'ham';
+        resultBox.innerHTML = '✅ 判定结果：<b>正常邮件</b>';
+      }
+    } catch (e) {
+      resultBox.className = 'waiting';
+      resultBox.innerHTML = '❌ 请求失败，请确认 Flask 服务已启动';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

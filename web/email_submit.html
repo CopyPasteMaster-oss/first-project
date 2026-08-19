@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>AI邮件算命馆</title>
+
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+
+body{
+
+    min-height:100vh;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+
+    font-family:
+    "Microsoft YaHei",
+    sans-serif;
+
+
+    background:
+
+    radial-gradient(circle at top,
+    #6b4f9b,
+    #21152e 60%,
+    #080808);
+
+
+    color:white;
+
+}
+
+
+
+/* 主体 */
+
+.box{
+
+
+    width:760px;
+
+
+    padding:40px;
+
+
+    background:
+
+    rgba(255,255,255,.12);
+
+
+    backdrop-filter:blur(20px);
+
+
+    border-radius:30px;
+
+
+    border:
+
+    1px solid rgba(255,255,255,.25);
+
+
+    box-shadow:
+
+    0 0 80px rgba(160,90,255,.5);
+
+}
+
+
+
+/* 标题 */
+
+.title{
+
+
+    text-align:center;
+
+
+    font-size:36px;
+
+
+    margin-bottom:10px;
+
+
+}
+
+
+.sub{
+
+
+    text-align:center;
+
+
+    color:#ddd;
+
+
+    margin-bottom:30px;
+
+}
+
+
+
+
+/* 道士 */
+
+.master{
+
+
+    text-align:center;
+
+
+    font-size:90px;
+
+
+    animation:
+
+    float 3s infinite;
+
+
+}
+
+
+
+@keyframes float{
+
+
+0%,100%{
+
+transform:translateY(0);
+
+}
+
+
+50%{
+
+transform:translateY(-15px);
+
+}
+
+
+}
+
+
+
+/* 输入框 */
+
+
+textarea{
+
+
+width:100%;
+
+
+height:220px;
+
+
+padding:20px;
+
+
+border-radius:20px;
+
+
+border:none;
+
+
+outline:none;
+
+
+font-size:16px;
+
+
+
+background:
+
+rgba(255,255,255,.92);
+
+
+}
+
+
+
+
+
+.buttons{
+
+
+display:flex;
+
+
+gap:15px;
+
+
+margin-top:20px;
+
+
+}
+
+
+
+button{
+
+
+flex:1;
+
+
+padding:15px;
+
+
+border-radius:18px;
+
+
+border:none;
+
+
+font-size:18px;
+
+
+cursor:pointer;
+
+
+transition:.3s;
+
+
+}
+
+
+
+button:hover{
+
+
+transform:translateY(-5px);
+
+
+}
+
+
+
+.example{
+
+
+background:white;
+
+
+}
+
+
+
+.start{
+
+
+background:
+
+linear-gradient(
+135deg,
+#ffcc33,
+#ff8800
+);
+
+
+color:white;
+
+
+}
+
+
+
+/* 结果 */
+
+.result{
+
+
+margin-top:30px;
+
+
+padding:25px;
+
+
+border-radius:20px;
+
+
+display:none;
+
+
+text-align:center;
+
+
+font-size:20px;
+
+
+}
+
+
+
+.loading{
+
+
+display:block;
+
+
+background:
+
+rgba(255,255,255,.15);
+
+
+}
+
+
+
+.bad{
+
+
+display:block;
+
+
+background:
+
+rgba(255,0,0,.2);
+
+
+border:
+
+1px solid #ff5555;
+
+
+}
+
+
+
+.good{
+
+
+display:block;
+
+
+background:
+
+rgba(0,255,150,.2);
+
+
+border:
+
+1px solid #00ffaa;
+
+
+}
+
+
+
+.footer{
+
+
+margin-top:30px;
+
+
+text-align:center;
+
+
+font-size:13px;
+
+
+color:#bbb;
+
+
+}
+
+
+</style>
+
+
+</head>
+
+
+<body>
+
+
+
+<div class="box">
+
+
+<div class="title">
+
+🔮 AI邮件算命馆
+
+</div>
+
+
+<div class="sub">
+
+小道长正在读取邮件命格...
+
+<br>
+
+Naive Bayes · NLP · Flask
+
+
+</div>
+
+
+
+<div class="master">
+
+🧙‍♂️
+
+</div>
+
+
+
+<textarea
+
+id="content"
+
+placeholder="
+
+请输入邮件八字：
+
+例如：
+
+尊敬客户，本公司提供发票服务，
+优惠活动，欢迎咨询...
+
+">
+
+
+</textarea>
+
+
+
+<div class="buttons">
+
+
+<button
+
+class="example"
+
+onclick="exampleMail()">
+
+📜 随机卦象
+
+
+</button>
+
+
+<button
+
+class="start"
+
+id="btn"
+
+onclick="startPredict()">
+
+✨ 启动天机
+
+
+</button>
+
+
+</div>
+
+
+
+<div
+
+id="result"
+
+class="result">
+
+</div>
+
+
+
+<div class="footer">
+
+© AI邮件算命馆
+
+小道长提醒：不要轻易相信陌生链接
+
+</div>
+
+
+</div>
+
+
+
+
+<script>
+
+
+
+const examples=[
+
+
+"尊敬客户，本公司长期代开发票，税率优惠，欢迎咨询，付款后立即办理。",
+
+
+"老师您好，我已经完成今天的数据分析作业，请您查看。"
+
+
+];
+
+
+let i=0;
+
+
+
+function exampleMail(){
+
+
+document.getElementById("content").value=
+
+examples[i];
+
+
+i++;
+
+if(i>=examples.length)
+
+i=0;
+
+
+}
+
+
+
+
+async function startPredict(){
+
+
+
+let text=
+
+document.getElementById("content").value.trim();
+
+
+let result=
+
+document.getElementById("result");
+
+
+let btn=
+
+document.getElementById("btn");
+
+
+
+if(!text){
+
+
+result.style.display="block";
+
+
+result.className="result loading";
+
+
+result.innerHTML=
+
+"⚠️ 道长提示：请先提交邮件八字";
+
+
+return;
+
+
+}
+
+
+
+btn.disabled=true;
+
+
+
+result.style.display="block";
+
+
+result.className="result loading";
+
+
+result.innerHTML=
+
+"🧙 小道长正在掐指推演...<br><br>"
+
++
+
+"☯ 分析文本气场<br>"
+
++
+
+"☯ 计算贝叶斯命格<br>"
+
++
+
+"☯ 查询危险指数";
+
+
+
+
+try{
+
+
+let res=
+
+await fetch("/email_handle",{
+
+
+method:"POST",
+
+
+headers:{
+
+
+"Content-Type":
+
+"application/json"
+
+
+},
+
+
+body:
+
+JSON.stringify({
+
+content:text
+
+})
+
+
+});
+
+
+
+let data=
+
+await res.json();
+
+
+
+
+if(data.result==="垃圾邮件"){
+
+
+result.className="result bad";
+
+
+result.innerHTML=
+
+`
+
+⚠️ 天机显示：大凶<br><br>
+
+
+邮件命格：
+
+<b>垃圾邮件</b>
+
+
+<br><br>
+
+
+凶兆：
+
+发票之气、营销之气、诱导之气
+
+
+<br><br>
+
+
+建议：
+
+立即打入垃圾轮回池 🗑️
+
+`;
+
+
+}
+
+else{
+
+
+result.className="result good";
+
+
+result.innerHTML=
+
+`
+
+✅ 天机显示：吉<br><br>
+
+
+邮件命格：
+
+<b>正常邮件</b>
+
+
+<br><br>
+
+
+此邮件：
+
+无明显危险气息
+
+
+<br><br>
+
+
+建议：
+
+放心阅读 ☯
+
+`;
+
+
+}
+
+
+
+}catch(e){
+
+
+
+result.className="result loading";
+
+
+result.innerHTML=
+
+"❌ 天机连接失败，请检查 Flask 服务";
+
+
+}
+
+
+
+btn.disabled=false;
+
+
+
+}
+
+
+
+</script>
+
+
+</body>
+
+</html>
